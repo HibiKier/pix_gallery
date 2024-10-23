@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "zhenxun-pix-gallery"
+version = "0.1.0"
+description = ""
+authors = ["HibiKier <775757368@qq.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+fastapi = "^0.115.3"
+tortoise-orm = {extras = ["asyncpg"], version = "^0.21.7"}
+strenum = "^0.4.15"
+loguru = "^0.7.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
