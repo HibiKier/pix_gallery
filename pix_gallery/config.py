@@ -1,4 +1,13 @@
+from pydantic import BaseModel
 from strenum import StrEnum
+
+
+class ConfigModel(BaseModel):
+
+    db_url: str
+    """数据库链接"""
+    token: str
+    """token"""
 
 
 class KwType(StrEnum):

@@ -1,14 +1,12 @@
-from zhenxun.utils._build_image import BuildImage
-from zhenxun.utils._image_template import ImageTemplate
-
-from ..config import KwType
-from ..models.pix_gallery import PixGallery
-from ..models.pix_keyword import PixKeyword
+from ...config import KwType
+from ...database.models.pix_gallery import PixGallery
+from ...database.models.pix_keyword import PixKeyword
+from .models import ImageCount, KeywordItem
 
 
 class InfoManage:
     @classmethod
-    async def get_seek_info(cls, seek_type: str | None) -> BuildImage:
+    async def get_seek_info(cls, seek_type: str | None) -> list[KeywordItem]:
         """获取收录数据
 
         参数:
@@ -27,25 +25,19 @@ class InfoManage:
         result = await query.annotate().values(
             "id", "content", "kw_type", "handle_type", "seek_count"
         )
-        data_list = [
-            [
-                r["id"],
-                r["content"],
-                r["kw_type"],
-                r["handle_type"],
-                r["seek_count"],
-            ]
+        return [
+            KeywordItem(
+                id=r["id"],
+                content=r["content"],
+                kw_type=r["kw_type"],
+                handle_type=r["handle_type"],
+                seek_count=r["seek_count"],
+            )
             for r in result
         ]
-        return await ImageTemplate.table_page(
-            "PIX收录关键词",
-            None,
-            ["ID", "内容", "类型", "处理方式", "搜索次数"],
-            data_list,
-        )
 
     @classmethod
-    async def get_pix_gallery(cls, tags: list[str]) -> BuildImage:
+    async def get_pix_gallery(cls, tags: list[str]) -> ImageCount:
         """查看pix图库
 
         参数:
@@ -61,14 +53,4 @@ class InfoManage:
         count = await query.filter(nsfw_tag__not=2).annotate().count()
         r18_count = await query.filter(nsfw_tag=2).annotate().count()
         ai_count = await query.filter(is_ai=True).annotate().count()
-        return await ImageTemplate.table_page(
-            "PIX图库",
-            None,
-            ["类型", "数量"],
-            [
-                ["总数", all_count],
-                ["普通", count],
-                ["R18", r18_count],
-                ["AI", ai_count],
-            ],
-        )
+        return ImageCount(count=all_count, normal=count, r18=r18_count, ai=ai_count)

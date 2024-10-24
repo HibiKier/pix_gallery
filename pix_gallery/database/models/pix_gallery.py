@@ -29,7 +29,7 @@ class PixGallery(Model):
     """插画ai类型"""
     tags = fields.TextField()
     """tags"""
-    image_urls = fields.JSONField()
+    image_urls: dict[str, str] = fields.JSONField()  # type: ignore
     """pixiv url链接"""
     img_p = fields.CharField(255)
     """图片pN"""

@@ -1,82 +1,33 @@
-from nonebot.permission import SUPERUSER
-from nonebot_plugin_uninfo import Uninfo
-from nonebot.plugin import PluginMetadata
-from nonebot_plugin_alconna import Args, Match, Alconna, Arparma, on_alconna
+from fastapi.responses import JSONResponse
 
-from zhenxun.services.log import logger
-from zhenxun.utils.enum import PluginType
-from zhenxun.utils.message import MessageUtils
-from zhenxun.configs.utils import PluginExtraData
-
+from ...auth import authentication
+from ..base_models import Result
+from ..router import router
 from .data_source import InfoManage
+from .models import ImageCount, KeywordItem
 
-__plugin_meta__ = PluginMetadata(
-    name="PIX收录",
-    description="PIX关键词/UID/PID添加管理",
-    usage="""
-    指令：
-        pix图库 ?[tags](使用空格分隔)
-        pix查看 ?["u", "p", "k", "a"]
-            u: uid
-            p: pid
-            k: 关键词
-            a: 全部(默认)
-    """.strip(),
-    extra=PluginExtraData(
-        author="HibiKier",
-        plugin_type=PluginType.SUPERUSER,
-        version="0.1",
-    ).dict(),
+
+@router.get(
+    "/pix_gallery_count",
+    dependencies=[authentication()],
+    response_model=Result[ImageCount],
+    response_class=JSONResponse,
+    description="PIX图片数量",
 )
+async def _(tags: list[str] | None = None):
+    if tags is None:
+        tags = []
+    result = await InfoManage.get_pix_gallery(tags)
+    return Result.ok(result)
 
-_gallery_matcher = on_alconna(
-    Alconna(
-        "pix图库",
-        Args["tags?", str] / "\n",
-    ),
-    priority=5,
-    block=True,
+
+@router.get(
+    "/pix_seek_info",
+    dependencies=[authentication()],
+    response_model=Result[list[KeywordItem]],
+    response_class=JSONResponse,
+    description="PIX搜索关键词信息",
 )
-
-_matcher = on_alconna(
-    Alconna(
-        "pix查看",
-        Args["seek_type?", ["u", "p", "k", "a"]],
-    ),
-    priority=1,
-    block=True,
-    permission=SUPERUSER,
-)
-
-
-@_matcher.handle()
-async def _(
-    session: Uninfo,
-    arparma: Arparma,
-    seek_type: Match[str],
-):
-    result = await InfoManage.get_seek_info(
-        seek_type.result if seek_type.available else None
-    )
-    await MessageUtils.build_message(result).send(reply_to=True)
-    logger.info(
-        f"PIX 查看PIX收录 seek_type: {seek_type.result}",
-        arparma.header_result,
-        session=session,
-    )
-
-
-@_gallery_matcher.handle()
-async def _(
-    session: Uninfo,
-    arparma: Arparma,
-    tags: Match[str],
-):
-    tags_list = []
-    if tags.available and tags.result.strip():
-        tags_list = tags.result.strip().split()
-    result = await InfoManage.get_pix_gallery(tags_list)
-    await MessageUtils.build_message(result).send(reply_to=True)
-    logger.info(
-        f"PIX 查看PIX图库 tags: {tags_list}", arparma.header_result, session=session
-    )
+async def _(seek_type: str = "a"):
+    result = await InfoManage.get_seek_info(seek_type)
+    return Result.ok(result)

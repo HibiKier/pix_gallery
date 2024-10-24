@@ -1,12 +1,6 @@
-from pathlib import Path
-
 from tortoise.expressions import Q
 
-from zhenxun.utils.common_utils import SqlUtils
-from zhenxun.utils.http_utils import AsyncHttpx
-from zhenxun.configs.path_config import TEMP_PATH
-
-from ..models.pix_gallery import PixGallery
+from ...database.models.pix_gallery import PixGallery
 
 headers = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.6;"
@@ -15,9 +9,16 @@ headers = {
 }
 
 
+def random(query, limit: int = 1) -> str:
+    query = f"{query.sql()} ORDER BY RANDOM() LIMIT {limit};"
+    return query
+
+
 class PixManage:
     @classmethod
-    async def get_pix(cls, tags: list[str], num: int) -> list[PixGallery]:
+    async def get_pix(
+        cls, tags: list[str], num: int, nsfw_tag: int | None, is_ai: bool | None
+    ) -> list[PixGallery]:
         """获取图片
 
         参数:
@@ -28,27 +29,12 @@ class PixManage:
             list[PixGallery]: 图片数据列表
         """
         query = PixGallery
+        if nsfw_tag:
+            query = query.filter(nsfw_tag=nsfw_tag)
+        if is_ai:
+            query = query.filter(is_ai=is_ai)
         for tag in tags:
             query = query.filter(
                 Q(tags__contains=tag) | Q(author__contains=tag) | Q(pid__contains=tag)
             )
-        return await PixGallery.raw(SqlUtils.random(query.annotate(), num))  # type: ignore
-
-    @classmethod
-    async def get_image(cls, pix: PixGallery) -> Path | None:
-        """获取图片
-
-        参数:
-            pix: PixGallery
-
-        返回:
-            Path | None: 图片路径
-        """
-        k = next(iter(pix.image_urls))
-        img_url = pix.image_urls[k]
-        file = TEMP_PATH / f"pix_{pix.pid}_{pix.img_p}_{pix.id}.png"
-        return (
-            file
-            if await AsyncHttpx.download_file(img_url, file, headers=headers)
-            else None
-        )
+        return await PixGallery.raw(random(query.annotate(), num))  # type: ignore

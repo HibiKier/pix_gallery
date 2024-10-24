@@ -1,4 +1,4 @@
-from typing import Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel
 
@@ -20,3 +20,17 @@ class Result(Generic[RT], BaseModel):
     """警告信息"""
     data: RT = None
     """返回数据"""
+
+    @classmethod
+    def warning_(cls, info: str, code: int = 200) -> "Result[RT]":
+        return cls(suc=True, warning=info, code=code)
+
+    @classmethod
+    def fail(cls, info: str = "异常错误", code: int = 500) -> "Result[RT]":
+        return cls(suc=False, info=info, code=code)
+
+    @classmethod
+    def ok(
+        cls, data: Any = None, info: str = "操作成功", code: int = 200
+    ) -> "Result[RT]":
+        return cls(suc=True, info=info, code=code, data=data)
