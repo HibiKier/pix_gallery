@@ -122,12 +122,26 @@ class Config:
             json_data = json.loads(self.file.read_text(encoding="utf-8"))
             self.data = ConfigModel.model_validate_json(json_data)
         else:
-            self.data = ConfigModel(db_url="", token=secrets.token_urlsafe(32))
+            self.data = ConfigModel(
+                db_url="", token="", secret_key=secrets.token_urlsafe(32)
+            )
             self.save()
             logger.info("已生成配置文件...")
 
     def save(self):
         self.file.write_text(self.data.model_dump_json(), encoding="utf-8")
+
+    @property
+    def db_url(self) -> str:
+        return self.data.db_url
+
+    @property
+    def token(self) -> str:
+        return self.data.token
+
+    @property
+    def secret_key(self) -> str:
+        return self.data.secret_key
 
 
 config = Config()

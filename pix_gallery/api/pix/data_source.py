@@ -1,6 +1,8 @@
 from tortoise.expressions import Q
 
+from ...database.models.call_log import CallLog
 from ...database.models.pix_gallery import PixGallery
+from ...database.models.tag_log import TagLog
 
 headers = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.6;"
@@ -38,3 +40,22 @@ class PixManage:
                 Q(tags__contains=tag) | Q(author__contains=tag) | Q(pid__contains=tag)
             )
         return await PixGallery.raw(random(query.annotate(), num))  # type: ignore
+
+    @classmethod
+    async def token_to_db(cls, ip: str, token: str, tags: list[str]):
+        """存储查询日志
+
+        参数:
+            ip: ip
+            token: token
+            tags: tags
+        """
+        if not tags:
+            return
+        await CallLog.create(
+            ip=ip,
+            token=token,
+            tags=tags,
+        )
+        if create_list := [TagLog(tag=t, token=token) for t in tags if t.strip()]:
+            await TagLog.bulk_create(create_list, 10)

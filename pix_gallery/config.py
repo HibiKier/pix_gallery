@@ -8,6 +8,8 @@ class ConfigModel(BaseModel):
     """数据库链接"""
     token: str
     """token"""
+    secret_key: str
+    """secret_key"""
 
 
 class KwType(StrEnum):

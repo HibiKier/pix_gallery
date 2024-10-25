@@ -44,4 +44,5 @@ async def _(
                 url=url,
             )
         )
+    
     return Result.ok(data_list)
