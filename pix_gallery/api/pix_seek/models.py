@@ -1,12 +1,12 @@
-from typing import Literal
-
 from pydantic import BaseModel
+
+from ...config import SeekType
 
 
 class PostData(BaseModel):
     """post数据模型"""
 
-    seek_type: Literal["u", "p", "k", "a"] | None = "a"
+    seek_type: SeekType | None = SeekType.ALL
     """搜索类型"""
     num: int | None = None
     """数量"""

@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from loguru import logger
 
 from ...auth import auth_superuser, authentication
-from ...config import KwHandleType
+from ...config import KwHandleType, KwType
 from ...router import router
 from ..base_models import Result
 from .data_source import KeywordManage
@@ -19,11 +19,11 @@ from .models import PixAddData, PixHandleData
 )
 async def _(data: PixAddData, request: Request):
     ip = request.client.host if request.client else ""
-    if data.add_type == "b":
+    if data.add_type == KwType.BLACK:
         result = await KeywordManage.add_black_pid(ip, data.content)
-    elif data.add_type == "u":
+    elif data.add_type == KwType.UID:
         result = await KeywordManage.add_uid(ip, data.content)
-    elif data.add_type == "p":
+    elif data.add_type == KwType.PID:
         result = await KeywordManage.add_pid(ip, data.content)
     else:
         result = await KeywordManage.add_keyword(ip, data.content)
@@ -40,21 +40,6 @@ async def _(data: PixAddData, request: Request):
 )
 async def _(data: PixHandleData, request: Request):
     ip = request.client.host if request.client else ""
-    if data.handle_type == "b":
-        result = await KeywordManage.handle_keyword(
-            ip, data.id, None, KwHandleType.BLACK
-        )
-    elif data.handle_type == "a":
-        result = await KeywordManage.handle_keyword(
-            ip, data.id, None, KwHandleType.PASS
-        )
-    elif data.handle_type == "f":
-        result = await KeywordManage.handle_keyword(
-            ip, data.id, None, KwHandleType.FAIL
-        )
-    else:
-        result = await KeywordManage.handle_keyword(
-            ip, data.id, None, KwHandleType.IGNORE
-        )
+    result = await KeywordManage.handle_keyword(ip, data.id, None, data.handle_type)
     logger.info(f"PIX ip: {ip} 处理结果: {result}")
     return Result.ok(info=result)

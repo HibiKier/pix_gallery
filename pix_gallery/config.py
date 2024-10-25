@@ -3,7 +3,6 @@ from strenum import StrEnum
 
 
 class ConfigModel(BaseModel):
-
     db_url: str
     """数据库链接"""
     token: str
@@ -21,6 +20,21 @@ class KwType(StrEnum):
     """用户uid"""
     PID = "PID"
     """图片pid"""
+    BLACK = "BLACK"
+    """黑名单"""
+
+
+class SeekType(StrEnum):
+    """搜索类型"""
+
+    KEYWORD = "KEYWORD"
+    """关键词"""
+    UID = "UID"
+    """用户uid"""
+    PID = "PID"
+    """图片pid"""
+    ALL = "ALL"
+    """ALL"""
 
 
 class KwHandleType(StrEnum):
