@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 
+from ..database.models.token_console import TokenConsole
 from ..utils import config
 from .security import create_access_for_header, verify_and_read_jwt
 
@@ -8,8 +9,10 @@ router = APIRouter(prefix="/pix")
 
 
 @router.post("/token")
-async def login_for_access_token():
+async def login_for_access_token(request: Request):
     access_token = create_access_for_header()
+    ip = request.client.host if request.client else ""
+    await TokenConsole.create(ip=ip, token=access_token)
     return {"access_token": access_token, "token_type": "bearer"}
 
 
