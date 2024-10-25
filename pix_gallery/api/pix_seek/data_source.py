@@ -1,5 +1,4 @@
 import asyncio
-import threading
 from asyncio import Semaphore, Task
 from copy import deepcopy
 from typing import Literal
@@ -102,24 +101,17 @@ class PixSeekManage:
         for data in data_list:
             logger.debug(f"PIX开始收录 {data.kw_type}: {data.content}")
             if data.kw_type == KwType.PID:
-                task_list.append(
-                    asyncio.create_task(cls.seek_pid(data.content, semaphore))
-                )
+                task_list.append(cls.seek_pid(data.content, semaphore))
             elif data.kw_type == KwType.UID:
-                task_list.append(
-                    asyncio.create_task(cls.seek_uid(data.content, semaphore))
-                )
+                task_list.append(cls.seek_uid(data.content, semaphore))
             elif data.kw_type == KwType.KEYWORD:
                 for page in range(1, 30):
                     logger.debug(
                         f"PIX开始收录 {data.kw_type}: {data.content} | page: {page}"
                     )
-                    task_list.append(
-                        asyncio.create_task(
-                            cls.seek_keyword(data.content, page, semaphore)
-                        )
-                    )
-        threading.Thread(target=cls.thread_func, args=[task_list, data_list]).start()
+                    task_list.append(cls.seek_keyword(data.content, page, semaphore))
+        asyncio.create_task(cls._run_to_db(task_list, data_list))
+        # threading.Thread(target=cls.thread_func, args=[task_list, data_list]).start()
         return f"成功提交收录请求, 正在收录 {[p.content for p in data_list]}"
 
     @classmethod
@@ -231,19 +223,19 @@ class PixSeekManage:
         return data_list
 
     @classmethod
-    async def seek_pid(cls, pid: str, semaphore: Semaphore) -> Task:
+    def seek_pid(cls, pid: str, semaphore: Semaphore) -> Task:
         api = get_api(KwType.PID)
         params = {"id": pid}
         return asyncio.create_task(cls.__seek(KwType.PID, api, params, semaphore))
 
     @classmethod
-    async def seek_uid(cls, uid: str, semaphore: Semaphore) -> Task:
+    def seek_uid(cls, uid: str, semaphore: Semaphore) -> Task:
         api = get_api(KwType.UID)
         params = {"id": uid}
         return asyncio.create_task(cls.__seek(KwType.UID, api, params, semaphore))
 
     @classmethod
-    async def seek_keyword(cls, keyword: str, page: int, semaphore: Semaphore) -> Task:
+    def seek_keyword(cls, keyword: str, page: int, semaphore: Semaphore) -> Task:
         api = get_api(KwType.KEYWORD)
         params = {"word": keyword, "page": page}
         return asyncio.create_task(cls.__seek(KwType.KEYWORD, api, params, semaphore))
