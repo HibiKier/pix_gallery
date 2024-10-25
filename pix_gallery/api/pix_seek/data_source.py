@@ -1,4 +1,5 @@
 import asyncio
+import threading
 from asyncio import Semaphore, Task
 from copy import deepcopy
 from typing import Literal
@@ -21,7 +22,7 @@ class PixSeekManage:
         seek_type: Literal["u", "p", "k", "a"],
         num: int | None,
         only_not_update: bool = True,
-    ) -> tuple[int, int]:
+    ) -> str:
         """获取关键词数据
 
         参数:
@@ -61,6 +62,7 @@ class PixSeekManage:
             semaphore: 信号量
         """
         async with semaphore:
+            logger.debug(f"访问API: {api}, 参数: {params}")
             res = await AsyncHttpx.get(api, params=params)
             if res.status_code != 200:
                 logger.warning(
@@ -86,7 +88,7 @@ class PixSeekManage:
         )  # type: ignore
 
     @classmethod
-    async def seek(cls, data_list: list[PixKeyword]) -> tuple[int, int]:
+    async def seek(cls, data_list: list[PixKeyword]) -> str:
         """搜索关键词
 
         参数:
@@ -100,20 +102,41 @@ class PixSeekManage:
         for data in data_list:
             logger.debug(f"PIX开始收录 {data.kw_type}: {data.content}")
             if data.kw_type == KwType.PID:
-                task_list.append(await cls.seek_pid(data.content, semaphore))
+                task_list.append(
+                    asyncio.create_task(cls.seek_pid(data.content, semaphore))
+                )
             elif data.kw_type == KwType.UID:
-                task_list.append(await cls.seek_uid(data.content, semaphore))
+                task_list.append(
+                    asyncio.create_task(cls.seek_uid(data.content, semaphore))
+                )
             elif data.kw_type == KwType.KEYWORD:
                 for page in range(1, 30):
                     logger.debug(
                         f"PIX开始收录 {data.kw_type}: {data.content} | page: {page}"
                     )
                     task_list.append(
-                        await cls.seek_keyword(data.content, page, semaphore)
+                        asyncio.create_task(
+                            cls.seek_keyword(data.content, page, semaphore)
+                        )
                     )
+        threading.Thread(target=cls.thread_func, args=[task_list, data_list]).start()
+        return f"成功提交收录请求, 正在收录 {[p.content for p in data_list]}"
+
+    @classmethod
+    def thread_func(cls, task_list: list[Task], data_list: list[PixKeyword]):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(cls._run_to_db(task_list, data_list))
+        loop.close()
+
+    @classmethod
+    async def _run_to_db(
+        cls, task_list: list[Task], data_list: list[PixKeyword]
+    ) -> tuple[int, int]:
         result = await asyncio.gather(*task_list)
         for data in data_list:
             data.seek_count += 1
+        logger.debug(f"共收录: {len(data_list)} 条数据.")
         await PixKeyword.bulk_update(data_list, fields=["seek_count"])
         return await cls.data_to_db(result)
 
@@ -139,9 +162,12 @@ class PixSeekManage:
                 model_list.extend(cls.keyword2model(data))
         exists = await cls.get_exists_id()
         model_list_s = []
+        in_list = []
         exists_count = 0
         for model in model_list:
-            if model and f"{model.pid}_{model.img_p}" not in exists:
+            k = f"{model.pid}_{model.img_p}"
+            if model and k not in exists and k not in in_list:
+                in_list.append(f"{model.pid}_{model.img_p}")
                 model_list_s.append(model)
             else:
                 logger.debug(f"pix收录已存在: {model.pid}_{model.img_p}...")
@@ -157,6 +183,10 @@ class PixSeekManage:
         for illust in model.illusts:
             if illust.total_bookmarks >= 500:
                 data_list.extend(cls.pid2model(illust))
+            else:
+                logger.debug(
+                    f"pix PID: {illust.id} 收录收藏数不足: {illust.total_bookmarks}, 已跳过"
+                )
         return data_list
 
     @classmethod
@@ -165,6 +195,10 @@ class PixSeekManage:
         for illust in model.illusts:
             if illust.total_bookmarks >= 500:
                 data_list.extend(cls.pid2model(illust))
+            else:
+                logger.debug(
+                    f"pix PID: {illust.id} 收录收藏数不足: {illust.total_bookmarks}, 已跳过"
+                )
         return data_list
 
     @classmethod

@@ -115,12 +115,10 @@ class AsyncHttpx:
 
 
 class Config:
-
     def __init__(self) -> None:
         self.file = Path() / "config.json"
         if self.file.exists():
-            json_data = json.loads(self.file.read_text(encoding="utf-8"))
-            self.data = ConfigModel.model_validate_json(json_data)
+            self.data = ConfigModel.parse_file(self.file)
         else:
             self.data = ConfigModel(
                 db_url="", token="", secret_key=secrets.token_urlsafe(32)
@@ -129,7 +127,8 @@ class Config:
             logger.info("已生成配置文件...")
 
     def save(self):
-        self.file.write_text(self.data.model_dump_json(), encoding="utf-8")
+        with open(self.file, "w", encoding="utf-8") as f:
+            json.dump(self.data.dict(), f, ensure_ascii=False, indent=4)
 
     @property
     def db_url(self) -> str:

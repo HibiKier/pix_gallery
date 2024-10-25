@@ -7,8 +7,8 @@ from ...config import KwHandleType, KwType
 class PixKeyword(Model):
     id = fields.IntField(pk=True, generated=True, auto_increment=True)
     """自增id"""
-    user_id = fields.CharField(255)
-    """用户id"""
+    ip = fields.CharField(255)
+    """ip"""
     content = fields.CharField(255, unique=True)
     """内容"""
     kw_type = fields.CharEnumField(KwType, description="关键词类型")

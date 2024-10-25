@@ -1,4 +1,4 @@
-import uuid
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict
 
@@ -16,22 +16,33 @@ EXPIRE_SECONDS: int = 60 * 60 * 24 * 365
 class JWTMeta(BaseModel):
     exp: datetime
     sub: str
+    is_superuser: bool = False
 
 
 def create_jwt(
-    payload: Dict[str, str], secret_key: str, expire_seconds: timedelta
+    payload: Dict[str, str],
+    secret_key: str,
+    expire_seconds: timedelta,
+    is_superuser: bool = False,
 ) -> str:
     to_encode = payload.copy()
     expire = datetime.now(timezone.utc) + expire_seconds
-    to_encode.update(JWTMeta(exp=expire, sub=JWT_SUBJECT).model_dump())
+    to_encode.update(
+        JWTMeta(exp=expire, sub=JWT_SUBJECT, is_superuser=is_superuser).dict()
+    )
     return jwt.encode(to_encode, secret_key, algorithm=ALGORITHM)
 
 
-def create_access_for_header() -> str:
+def generate_secure_token(length: int = 32) -> str:
+    return secrets.token_hex(length)
+
+
+def create_access_for_header(is_superuser: bool = False) -> str:
     return create_jwt(
-        payload={"token": str(uuid.uuid4())},
+        payload={"token": generate_secure_token()},
         secret_key=config.secret_key,
         expire_seconds=timedelta(seconds=EXPIRE_SECONDS),
+        is_superuser=is_superuser,
     )
 
 

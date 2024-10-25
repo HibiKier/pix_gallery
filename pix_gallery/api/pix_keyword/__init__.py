@@ -2,10 +2,10 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from loguru import logger
 
-from ...auth import authentication
+from ...auth import auth_superuser, authentication
 from ...config import KwHandleType
+from ...router import router
 from ..base_models import Result
-from ..router import router
 from .data_source import KeywordManage
 from .models import PixAddData, PixHandleData
 
@@ -33,7 +33,7 @@ async def _(data: PixAddData, request: Request):
 
 @router.post(
     "/pix_handle",
-    dependencies=[authentication()],
+    dependencies=[auth_superuser()],
     response_model=Result,
     response_class=JSONResponse,
     description="PIX搜索",

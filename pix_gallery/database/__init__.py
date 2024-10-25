@@ -1,3 +1,4 @@
+from loguru import logger
 from tortoise import Tortoise
 
 from ..utils import config
@@ -18,3 +19,4 @@ async def init_db():
         timezone="Asia/Shanghai",
     )
     await Tortoise.generate_schemas()
+    logger.info("数据库初始化完成")

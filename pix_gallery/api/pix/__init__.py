@@ -1,13 +1,15 @@
 from fastapi.responses import JSONResponse
 
+from ...auth import authentication
+from ...router import router
 from ..base_models import Result
-from ..router import router
 from .data_source import PixManage
 from .models import Pix
 
 
 @router.get(
     "/get_pix",
+    dependencies=[authentication()],
     response_model=Result[list[Pix]],
     response_class=JSONResponse,
     description="随机pix",
@@ -44,5 +46,5 @@ async def _(
                 url=url,
             )
         )
-    
+
     return Result.ok(data_list)

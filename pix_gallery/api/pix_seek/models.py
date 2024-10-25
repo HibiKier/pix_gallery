@@ -6,9 +6,9 @@ from pydantic import BaseModel
 class PostData(BaseModel):
     """post数据模型"""
 
-    seek_type: Literal["u", "p", "k", "a"] | None
+    seek_type: Literal["u", "p", "k", "a"] | None = "a"
     """搜索类型"""
-    num: int | None
+    num: int | None = None
     """数量"""
 
 
@@ -113,7 +113,7 @@ class KeywordModel(BaseModel):
 
     illusts: list[PidModel]
     """插画列表"""
-    next_url: str
+    next_url: str | None
     """下一页链接"""
     search_span_limit: int
     """搜索时间限制"""

@@ -1,8 +1,8 @@
 from fastapi.responses import JSONResponse
 
-from ...auth import authentication
+from ...auth import auth_superuser, authentication
+from ...router import router
 from ..base_models import Result
-from ..router import router
 from .data_source import InfoManage
 from .models import ImageCount, KeywordItem
 
@@ -23,7 +23,7 @@ async def _(tags: list[str] | None = None):
 
 @router.get(
     "/pix_seek_info",
-    dependencies=[authentication()],
+    dependencies=[auth_superuser()],
     response_model=Result[list[KeywordItem]],
     response_class=JSONResponse,
     description="PIX搜索关键词信息",
