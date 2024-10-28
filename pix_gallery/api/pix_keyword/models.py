@@ -4,7 +4,7 @@ from ...config import KwHandleType, KwType
 
 
 class PixAddData(BaseModel):
-    content: str
+    content: list[str] | str
     """内容"""
     add_type: KwType
     """添加类型"""

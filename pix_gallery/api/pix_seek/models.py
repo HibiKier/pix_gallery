@@ -104,7 +104,7 @@ class UidModel(BaseModel):
     """用户模型"""
     illusts: list[PidModel]
     """插画列表"""
-    next_url: str
+    next_url: str | None
     """下一页链接"""
 
 

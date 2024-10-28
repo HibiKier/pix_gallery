@@ -1,5 +1,7 @@
 from typing import Literal
 
+from loguru import logger
+
 from ...config import KwHandleType, KwType
 from ...database.models.pix_gallery import PixGallery
 from ...database.models.pix_keyword import PixKeyword
@@ -15,7 +17,7 @@ class KeywordManage:
     }  # noqa: RUF012
 
     @classmethod
-    async def add_keyword(cls, ip: str, keyword: str) -> str:
+    async def add_keyword(cls, ip: str, keyword: list[str] | str) -> str:
         """添加关键词
 
         参数:
@@ -28,7 +30,7 @@ class KeywordManage:
         return await cls.__add_content(ip, KwType.KEYWORD, keyword)
 
     @classmethod
-    async def add_uid(cls, ip: str, uid: str) -> str:
+    async def add_uid(cls, ip: str, uid: list[str] | str) -> str:
         """添加关键词
 
         参数:
@@ -43,7 +45,7 @@ class KeywordManage:
         return await cls.__add_content(ip, KwType.UID, uid)
 
     @classmethod
-    async def add_pid(cls, ip: str, pid: str) -> str:
+    async def add_pid(cls, ip: str, pid: list[str] | str) -> str:
         """添加关键词
 
         参数:
@@ -99,7 +101,7 @@ class KeywordManage:
         return f"已成功将内容/id: {id or content}设置为{cls.handle2cn[handle_type]}!"
 
     @classmethod
-    async def add_black_pid(cls, ip: str, pid: str) -> str:
+    async def add_black_pid(cls, ip: str, pid: list[str] | str) -> str:
         """添加黑名单pid
 
         参数:
@@ -112,7 +114,9 @@ class KeywordManage:
         return await cls.handle_keyword(ip, None, KwType.PID, KwHandleType.BLACK, pid)
 
     @classmethod
-    async def __add_content(cls, ip: str, kw_type: KwType, content: str) -> str:
+    async def __add_content(
+        cls, ip: str, kw_type: KwType, content: list[str] | str
+    ) -> str:
         """添加内容
 
         参数:
@@ -123,20 +127,29 @@ class KeywordManage:
         返回:
             str: 返回消息
         """
+        if isinstance(content, str):
+            content = [content]
         data = await PixKeyword.get_or_none(content=content, kw_type=kw_type)
         if data:
             return f"当前{kw_type}已存在，状态: {cls.handle2cn[data.handle_type]}"
-        pkd = PixKeyword(
-            ip=ip,
-            content=content,
-            kw_type=kw_type,
-        )
+        pkd_list = []
+        exists_content = await PixKeyword.filter(
+            content__in=content, kw_type=kw_type
+        ).values_list("content", flat=True)
+        ignore_kw = []
+        for c in content:
+            c = c.strip()
+            if c not in exists_content:
+                pkd_list.append(PixKeyword(ip=ip, content=c, kw_type=kw_type))
+            else:
+                ignore_kw.append(c)
+                logger.warning(f"关键词: {c} 已存在，跳过添加")
         result = f"已成功添加pix搜图{kw_type}: {content}!"
-        # if ip in Config.superusers:
-        #     pkd.handle_type = KwHandleType.PASS
-        # else:
+        if ignore_kw:
+            result += "\n以下关键词已存在，跳过添加: " + ", ".join(ignore_kw)
         result += "\n请等待管理员通过该关键词！"
-        await pkd.save()
+        if pkd_list:
+            await PixKeyword.bulk_create(pkd_list, 10)
         return result
 
     @classmethod
