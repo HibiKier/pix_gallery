@@ -1,6 +1,7 @@
 from fastapi.responses import JSONResponse
 
 from ...auth import auth_superuser, authentication
+from ...config import KwType
 from ...router import router
 from ..base_models import Result
 from .data_source import InfoManage
@@ -28,6 +29,6 @@ async def _(tags: list[str] | None = None):
     response_class=JSONResponse,
     description="PIX搜索关键词信息",
 )
-async def _(seek_type: str = "a"):
+async def _(seek_type: KwType | None = None):
     result = await InfoManage.get_seek_info(seek_type)
     return Result.ok(result)

@@ -39,7 +39,7 @@ class PixManage:
         query = PixGallery
         if nsfw_tag:
             query = query.filter(nsfw_tag__in=nsfw_tag)
-        if is_ai:
+        if is_ai is not None:
             query = query.filter(is_ai=is_ai)
         if is_r18 is not None:
             query = (
@@ -47,7 +47,10 @@ class PixManage:
             )
         for tag in tags:
             query = query.filter(
-                Q(tags__contains=tag) | Q(author__contains=tag) | Q(pid__contains=tag)
+                Q(tags__contains=tag)
+                | Q(author__contains=tag)
+                | Q(pid__contains=tag)
+                | Q(uid__contains=tag)
             )
         sql = random(query.annotate(), num)
         logger.debug(f"执行pix查询sql: {sql}")

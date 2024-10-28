@@ -6,7 +6,7 @@ from .models import ImageCount, KeywordItem
 
 class InfoManage:
     @classmethod
-    async def get_seek_info(cls, seek_type: str | None) -> list[KeywordItem]:
+    async def get_seek_info(cls, seek_type: KwType | None) -> list[KeywordItem]:
         """获取收录数据
 
         参数:
@@ -16,12 +16,8 @@ class InfoManage:
             BuildImage: 图片
         """
         query = PixKeyword
-        if seek_type == "u":
-            query = query.filter(kw_type=KwType.UID)
-        if seek_type == "p":
-            query = query.filter(kw_type=KwType.PID)
-        if seek_type == "k":
-            query = query.filter(kw_type=KwType.KEYWORD)
+        if seek_type:
+            query = query.filter(kw_type=seek_type)
         result = await query.annotate().values(
             "id", "content", "kw_type", "handle_type", "seek_count"
         )
