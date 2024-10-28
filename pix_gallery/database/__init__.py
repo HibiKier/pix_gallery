@@ -14,6 +14,7 @@ async def init_db():
                 "pix_gallery.database.models.call_log",
                 "pix_gallery.database.models.tag_log",
                 "pix_gallery.database.models.token_console",
+                "pix_gallery.database.models.token_console",
             ]
         },
         timezone="Asia/Shanghai",

@@ -25,7 +25,7 @@ class PixManage:
         num: int,
         nsfw_tag: list[int] | None,
         is_ai: bool | None,
-        is_r18: bool,
+        is_r18: bool | None,
     ) -> list[PixGallery]:
         """获取图片
 

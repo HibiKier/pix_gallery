@@ -10,7 +10,7 @@ from tortoise.functions import Concat
 from ...config import KwHandleType, KwType
 from ...database.models.pix_gallery import PixGallery
 from ...database.models.pix_keyword import PixKeyword
-from ...utils import AsyncHttpx, get_api
+from ...utils import AsyncHttpx, config, get_api
 from .models import KeywordModel, PidModel, UidModel
 
 
@@ -68,12 +68,11 @@ class PixSeekManage:
                     f"PIX搜索失败,api:{api},params:{params},httpCode: {res.status_code}"
                 )
             if t == KwType.PID:
-                model = PidModel(**res.json()["illust"])
+                return PidModel(**res.json()["illust"])
             elif t == KwType.UID:
-                model = UidModel(**res.json())
-            elif t == KwType.KEYWORD:
-                model = KeywordModel(**res.json())
-            return model
+                return UidModel(**res.json())
+            else:
+                return KeywordModel(**res.json())
 
     @classmethod
     async def get_exists_id(cls) -> list[str]:
@@ -173,7 +172,7 @@ class PixSeekManage:
     def keyword2model(cls, model: KeywordModel) -> list[PixGallery]:
         data_list = []
         for illust in model.illusts:
-            if illust.total_bookmarks >= 500:
+            if illust.total_bookmarks >= config.bookmarks:
                 data_list.extend(cls.pid2model(illust))
             else:
                 logger.debug(
@@ -213,6 +212,7 @@ class PixSeekManage:
                 copy_data = deepcopy(data_json)
                 copy_data["img_p"] = img_p
                 copy_data["image_urls"] = meta_page["image_urls"]
+                copy_data["is_multiple"] = True
                 img_p += 1
                 logger.debug(f"pix收录: {copy_data}")
                 data_list.append(PixGallery(**copy_data))

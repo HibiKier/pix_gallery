@@ -24,3 +24,5 @@ class Pix(BaseModel):
     nsfw_tag: int
     is_ai: bool
     url: str
+    is_multiple: bool
+    img_p: str

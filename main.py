@@ -8,10 +8,10 @@ from pix_gallery.utils import config
 if __name__ == "__main__":
     import uvicorn
 
-    from pix_gallery.auth.security import create_access_for_header
+    from pix_gallery.auth import init_superuser_token
 
     if not config.token:
-        config.data.token = create_access_for_header(is_superuser=True)
+        config.data.token = init_superuser_token()
         config.save()
 
     app = FastAPI()

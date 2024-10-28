@@ -1,6 +1,7 @@
 from time import time
 
 from fastapi import Depends, HTTPException, Request, status
+from loguru import logger
 
 from ..database.models.token_console import TokenConsole
 from ..router import router
@@ -11,15 +12,19 @@ ip_last_request_time = {}
 
 
 @router.post("/token")
-async def login_for_access_token(request: Request, is_superuser: bool = False):
-    access_token = create_access_for_header(is_superuser=is_superuser)
+async def login_for_access_token(request: Request):
+    access_token = create_access_for_header()
     ip = request.client.host if request.client else ""
     await TokenConsole.create(ip=ip, token=access_token)
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "is_superuser": is_superuser,
+        "is_superuser": False,
     }
+
+
+def init_superuser_token():
+    return create_access_for_header(is_superuser=True)
 
 
 def auth_superuser():
@@ -62,7 +67,7 @@ def authentication():
         authorization = request.headers.get("Authorization")
         client_ip = request.client.host if request.client else ""
         current_time = time()
-
+        logger.debug(f"client_ip: {client_ip}, token: {authorization}")
         if authorization:
             token = authorization.split()[1]
             payload = verify_and_read_jwt(token, config.data.secret_key)

@@ -33,7 +33,7 @@ class InfoManage:
         ]
 
     @classmethod
-    async def get_pix_gallery(cls, tags: list[str]) -> ImageCount:
+    async def get_pix_gallery(cls, tags: list[str] | None) -> ImageCount:
         """查看pix图库
 
         参数:
@@ -43,8 +43,9 @@ class InfoManage:
             BuildImage: 图片
         """
         query = PixGallery
-        for tag in tags:
-            query = query.filter(tags__contains=tag)
+        if tags:
+            for tag in tags:
+                query = query.filter(tags__contains=tag)
         all_count = await query.annotate().count()
         count = await query.filter(nsfw_tag__not=2).annotate().count()
         r18_count = await query.filter(nsfw_tag=2).annotate().count()

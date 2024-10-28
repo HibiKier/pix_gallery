@@ -11,6 +11,8 @@ class ConfigModel(BaseModel):
     """secret_key"""
     limit_time: int = 5
     """api调用速率限制"""
+    bookmarks: int = 240
+    """总收藏"""
 
 
 class KwType(StrEnum):

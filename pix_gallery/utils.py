@@ -135,6 +135,9 @@ class Config:
         return self.data.db_url
 
     @property
+    def bookmarks(self) -> int:
+        return self.data.bookmarks
+
     def token(self) -> str:
         return self.data.token
 

@@ -37,6 +37,8 @@ class PixGallery(Model):
     """nsfw标签,-1=未标记, 0=safe, 1=setu. 2=r18"""
     is_ai = fields.BooleanField(default=False)
     """是否ai"""
+    is_multiple = fields.BooleanField(default=False)
+    """是否多图"""
     create_time = fields.DatetimeField(auto_now_add=True, description="创建时间")
     """创建时间"""
 

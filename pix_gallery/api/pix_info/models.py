@@ -3,8 +3,15 @@ from pydantic import BaseModel
 from ...config import KwHandleType, KwType
 
 
-class ImageCount(BaseModel):
+class QueryCount(BaseModel):
+    tags: list[str] | None = []
 
+
+class QuerySeek(BaseModel):
+    seek_type: KwType | None = None
+
+
+class ImageCount(BaseModel):
     count: int
     """总数量"""
     normal: int
@@ -16,7 +23,6 @@ class ImageCount(BaseModel):
 
 
 class KeywordItem(BaseModel):
-
     id: int
     """id"""
     content: str
