@@ -1,33 +1,31 @@
 from fastapi.responses import JSONResponse
+from loguru import logger
 
 from ...auth import authentication
 from ...router import router
 from ..base_models import Result
 from .data_source import PixManage
-from .models import Pix
+from .models import Pix, PostData
 
 
-@router.get(
+@router.post(
     "/get_pix",
     dependencies=[authentication()],
     response_model=Result[list[Pix]],
     response_class=JSONResponse,
     description="随机pix",
 )
-async def _(
-    tags: list[str] | None = None,
-    num: int = 1,
-    size: str = "large",
-    nsfw_tag: int | None = None,
-    is_ai: bool | None = None,
-):
-    if tags is None:
-        tags = []
-    result_list = await PixManage.get_pix(tags, num, nsfw_tag, is_ai)
+async def _(data: PostData | None = None):
+    if not data:
+        data = PostData()
+    logger.info(f"执行get-pix, data: {data}")
+    result_list = await PixManage.get_pix(
+        data.tags, data.num, data.nsfw_tag, data.ai, data.r18
+    )
     data_list = []
     for result in result_list:
-        if size in result.image_urls:
-            url = result.image_urls[size]
+        if data.size in result.image_urls:
+            url = result.image_urls[data.size]
         else:
             k = list(result.image_urls)[0]
             url = result.image_urls[k]

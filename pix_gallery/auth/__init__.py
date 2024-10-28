@@ -70,7 +70,7 @@ def authentication():
         else:
             if client_ip in ip_last_request_time:
                 last_request_time = ip_last_request_time[client_ip]
-                if current_time - last_request_time < 5:
+                if current_time - last_request_time < config.limit_time:
                     raise HTTPException(
                         status_code=429,
                         detail="Too Many Requests: Please wait 5 seconds.",

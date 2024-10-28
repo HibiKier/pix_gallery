@@ -1,3 +1,4 @@
+from loguru import logger
 from tortoise.expressions import Q
 
 from ...database.models.call_log import CallLog
@@ -19,7 +20,12 @@ def random(query, limit: int = 1) -> str:
 class PixManage:
     @classmethod
     async def get_pix(
-        cls, tags: list[str], num: int, nsfw_tag: int | None, is_ai: bool | None
+        cls,
+        tags: list[str],
+        num: int,
+        nsfw_tag: list[int] | None,
+        is_ai: bool | None,
+        is_r18: bool,
     ) -> list[PixGallery]:
         """获取图片
 
@@ -32,14 +38,20 @@ class PixManage:
         """
         query = PixGallery
         if nsfw_tag:
-            query = query.filter(nsfw_tag=nsfw_tag)
+            query = query.filter(nsfw_tag__in=nsfw_tag)
         if is_ai:
             query = query.filter(is_ai=is_ai)
+        if is_r18 is not None:
+            query = (
+                query.filter(nsfw_tag=2) if is_r18 else query.filter(nsfw_tag__not=2)
+            )
         for tag in tags:
             query = query.filter(
                 Q(tags__contains=tag) | Q(author__contains=tag) | Q(pid__contains=tag)
             )
-        return await PixGallery.raw(random(query.annotate(), num))  # type: ignore
+        sql = random(query.annotate(), num)
+        logger.debug(f"执行pix查询sql: {sql}")
+        return await PixGallery.raw(sql)  # type: ignore
 
     @classmethod
     async def token_to_db(cls, ip: str, token: str, tags: list[str]):

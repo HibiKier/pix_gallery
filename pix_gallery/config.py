@@ -9,6 +9,8 @@ class ConfigModel(BaseModel):
     """token"""
     secret_key: str
     """secret_key"""
+    limit_time: int = 5
+    """api调用速率限制"""
 
 
 class KwType(StrEnum):

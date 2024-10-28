@@ -1,8 +1,18 @@
+from typing import Literal
+
 from pydantic import BaseModel
 
 
-class Pix(BaseModel):
+class PostData(BaseModel):
+    tags: list[str] = []
+    num: int = 1
+    size: Literal["large", "medium", "original", "square_medium"] = "large"
+    nsfw_tag: list[int] | None = []
+    ai: bool | None = None
+    r18: bool | None = None
 
+
+class Pix(BaseModel):
     pid: str
     uid: str
     author: str

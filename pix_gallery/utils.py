@@ -142,5 +142,9 @@ class Config:
     def secret_key(self) -> str:
         return self.data.secret_key
 
+    @property
+    def limit_time(self) -> int:
+        return self.data.limit_time
+
 
 config = Config()
