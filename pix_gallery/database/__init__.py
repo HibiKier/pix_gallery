@@ -1,7 +1,7 @@
 from loguru import logger
 from tortoise import Tortoise
 
-from ..utils import config
+from ..utils.utils import config
 
 
 async def init_db():
@@ -14,7 +14,11 @@ async def init_db():
                 "pix_gallery.database.models.call_log",
                 "pix_gallery.database.models.tag_log",
                 "pix_gallery.database.models.token_console",
-                "pix_gallery.database.models.token_console",
+                "pix_gallery.database.models.pid_search_log",
+                "pix_gallery.database.models.set_request",
+                "pix_gallery.database.models.star_users",
+                "pix_gallery.database.models.star_log",
+                "pix_gallery.database.models.tag_stat",
             ]
         },
         timezone="Asia/Shanghai",

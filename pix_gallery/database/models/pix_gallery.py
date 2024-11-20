@@ -39,6 +39,10 @@ class PixGallery(Model):
     """是否ai"""
     is_multiple = fields.BooleanField(default=False)
     """是否多图"""
+    block_level = fields.IntField(null=True)
+    """block等级 1: 可看 2: 不可看"""
+    star = fields.IntField(default=0)
+    """star数量"""
     create_time = fields.DatetimeField(auto_now_add=True, description="创建时间")
     """创建时间"""
 

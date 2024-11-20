@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from ...config import SeekType
+from ...config import KwType, SeekType
 
 
 class PostData(BaseModel):
@@ -23,7 +23,7 @@ class User(BaseModel):
     """账号"""
     profile_image_urls: dict[str, str]
     """头像"""
-    is_followed: bool
+    is_followed: bool | None = None
     """是否关注"""
 
 
@@ -111,6 +111,8 @@ class UidModel(BaseModel):
 class KeywordModel(BaseModel):
     """关键词模型"""
 
+    keyword: str
+    """关键词"""
     illusts: list[PidModel]
     """插画列表"""
     next_url: str | None
@@ -119,3 +121,12 @@ class KeywordModel(BaseModel):
     """搜索时间限制"""
     show_ai: bool
     """是否显示ai插画"""
+
+
+class NoneModel(BaseModel):
+    content: str
+    """内容"""
+    kw_type: KwType
+    """关键词类型"""
+    error: str
+    """错误信息"""

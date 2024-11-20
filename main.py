@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from pix_gallery.api import router
 from pix_gallery.database import init_db
 from pix_gallery.logger import logger  # noqa: F401
-from pix_gallery.utils import config
+from pix_gallery.utils.utils import config
 
 if __name__ == "__main__":
     import uvicorn

@@ -9,6 +9,8 @@ class PixKeyword(Model):
     """自增id"""
     ip = fields.CharField(255)
     """ip"""
+    token = fields.CharField(255, null=True)
+    """token"""
     content = fields.CharField(255, unique=True)
     """内容"""
     kw_type = fields.CharEnumField(KwType, description="关键词类型")
@@ -19,9 +21,14 @@ class PixKeyword(Model):
     """处理人id"""
     seek_count = fields.IntField(default=0, description="搜索次数")
     """搜索次数"""
+    is_available = fields.BooleanField(default=True, description="是否可用")
+    """是否可用"""
     create_time = fields.DatetimeField(auto_now_add=True, description="创建时间")
     """创建时间"""
+    update_time = fields.DatetimeField(null=True, description="更新时间")
+    """更新时间"""
 
     class Meta:  # type: ignore
         table = "pix_keyword"
         table_description = "pix关键词数据表"
+        unique_together = ("content", "kw_type")

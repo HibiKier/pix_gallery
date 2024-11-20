@@ -11,7 +11,6 @@
             // "program": "${file}",
             "program": "main.py",
             "console": "integratedTerminal",
-            "pythonPath": "C:/Users/HibiKi/AppData/Local/pypoetry/Cache/virtualenvs/zhenxun-bot-8s7VIT0o-py3.11/Scripts/python.exe",
         }
     ]
 }

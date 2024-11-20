@@ -1,17 +1,21 @@
 import asyncio
+import random
 from asyncio import Semaphore, Task
 from copy import deepcopy
+from datetime import datetime
 from typing import Literal
 
 from loguru import logger
 from tortoise.expressions import F
 from tortoise.functions import Concat
 
+from pix_gallery.exception import NotFindPageException, OAuthException
+
 from ...config import KwHandleType, KwType
 from ...database.models.pix_gallery import PixGallery
 from ...database.models.pix_keyword import PixKeyword
-from ...utils import AsyncHttpx, config, get_api
-from .models import KeywordModel, PidModel, UidModel
+from ...utils.utils import AsyncHttpx, config, get_api
+from .models import KeywordModel, NoneModel, PidModel, UidModel
 
 
 class PixSeekManage:
@@ -32,17 +36,19 @@ class PixSeekManage:
         返回:
             tuple[int, int]: 保存数量, 重复数据
         """
-        query = PixKeyword.filter(handle_type=KwHandleType.PASS)
-        if only_not_update:
-            query = query.filter(seek_count=0)
+        query = PixKeyword.filter(handle_type=KwHandleType.PASS, is_available=True)
         if seek_type == "u":
             query = query.filter(kw_type=KwType.UID)
         elif seek_type == "p":
             query = PixKeyword.filter(kw_type=KwType.PID)
         elif seek_type == "k":
             query = PixKeyword.filter(kw_type=KwType.KEYWORD)
+        if only_not_update:
+            query = query.filter(seek_count=0).annotate().order_by("-create_time")
+        else:
+            query = query.annotate().order_by("seek_count")
         if num:
-            query = query.annotate().order_by("-create_time").limit(num)
+            query = query.limit(num)
         data_list = await query.all()
         if not data_list:
             raise ValueError("没有需要收录的数据...")
@@ -50,11 +56,12 @@ class PixSeekManage:
 
     @classmethod
     async def __seek(
-        cls, t: KwType, api: str, params: dict, semaphore: Semaphore
-    ) -> PidModel | UidModel | KeywordModel:
+        cls, content: str, t: KwType, api: str, params: dict, semaphore: Semaphore
+    ) -> PidModel | UidModel | KeywordModel | NoneModel:
         """搜索关键词
 
         参数:
+            content: 内容
             t: 关键词类型
             api: api
             params: 参数
@@ -62,17 +69,58 @@ class PixSeekManage:
         """
         async with semaphore:
             logger.debug(f"访问API: {api}, 参数: {params}")
-            res = await AsyncHttpx.get(api, params=params)
-            if res.status_code != 200:
+            res = None
+            json_data = None
+            try:
+                rand = random.randint(0, 10)
+                logger.debug(f"访问随机休眠: {rand}")
+                await asyncio.sleep(rand)
+                res = await AsyncHttpx.get(api, params=params)
+                json_data = res.json()
+                if er := json_data.get("error"):
+                    if msg := er.get("message"):
+                        if "Error occurred at the OAuth process" in msg:
+                            raise OAuthException()
+                    if msg := er.get("user_message"):
+                        if "尚无此页" in msg:
+                            raise NotFindPageException()
+                if res.status_code != 200:
+                    logger.warning(
+                        f"PIX搜索失败,api:{api},params:{params},httpCode: {res.status_code}"
+                    )
+                    return NoneModel(content=content, kw_type=t, error="status_code")
+                logger.debug(f"访问成功 api: {api}, 参数: {params}")
+                if t == KwType.PID:
+                    return PidModel(**json_data["illust"])
+                elif t == KwType.UID:
+                    u = UidModel(**json_data)
+                    if u.next_url and u.illusts:
+                        params["page"] += 1
+                        r = await cls.__seek(content, t, api, params, semaphore)
+                        if isinstance(r, UidModel):
+                            u.illusts.extend(r.illusts)
+                    if not u.illusts:
+                        return NoneModel(
+                            content=content, kw_type=t, error="not_find_illusts"
+                        )
+                    return u
+                else:
+                    return KeywordModel(**res.json(), keyword=content)
+            except OAuthException as e:
                 logger.warning(
-                    f"PIX搜索失败,api:{api},params:{params},httpCode: {res.status_code}"
+                    f"PIX搜索数据问题 {content}-{t}: {json_data or ''} & {type(e)}: {e}"
                 )
-            if t == KwType.PID:
-                return PidModel(**res.json()["illust"])
-            elif t == KwType.UID:
-                return UidModel(**res.json())
-            else:
-                return KeywordModel(**res.json())
+                return NoneModel(content=content, kw_type=t, error="oauth")
+            except NotFindPageException as e:
+                logger.warning(
+                    f"PIX搜索数据问题 {content}-{t}: {json_data or ''} & {type(e)}: {e}"
+                )
+                return NoneModel(content=content, kw_type=t, error="not_find_page")
+            except Exception as e:
+                logger.warning(
+                    f"PIX搜索数据问题 {content}-{t}: {json_data or ''} & {type(e)}: {e}"
+                )
+                return NoneModel(content=content, kw_type=t, error=str(e))
 
     @classmethod
     async def get_exists_id(cls) -> list[str]:
@@ -96,7 +144,7 @@ class PixSeekManage:
             tuple[int, int]: 保存数量, 重复数据
         """
         task_list = []
-        semaphore = asyncio.Semaphore(10)
+        semaphore = asyncio.Semaphore(1000)
         for data in data_list:
             logger.debug(f"PIX开始收录 {data.kw_type}: {data.content}")
             if data.kw_type == KwType.PID:
@@ -114,21 +162,52 @@ class PixSeekManage:
         return f"成功提交收录请求, 正在收录 {[p.content for p in data_list]}"
 
     @classmethod
-    def thread_func(cls, task_list: list[Task], data_list: list[PixKeyword]):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(cls._run_to_db(task_list, data_list))
-        loop.close()
-
-    @classmethod
     async def _run_to_db(
         cls, task_list: list[Task], data_list: list[PixKeyword]
     ) -> tuple[int, int]:
         result = await asyncio.gather(*task_list)
-        for data in data_list:
-            data.seek_count += 1
-        logger.debug(f"共收录: {len(data_list)} 条数据.")
-        await PixKeyword.bulk_update(data_list, fields=["seek_count"])
+        now = datetime.now()
+        num = len(data_list)
+        for r in result:
+            if isinstance(r, KeywordModel):
+                for data in data_list:
+                    if data.content == r.keyword and data.kw_type == KwType.KEYWORD:
+                        logger.debug(f"PIX收录 {r.keyword} 的数据: {len(r.illusts)}")
+                        data.seek_count += 1
+                        data.update_time = now
+                        break
+            elif isinstance(r, PidModel):
+                for data in data_list:
+                    if data.content == str(r.id) and data.kw_type == KwType.PID:
+                        logger.debug(
+                            f"PIX收录 {r.id} 的数据: {len(r.meta_pages) if r.meta_pages else 1}"
+                        )
+                        data.seek_count += 1
+                        data.update_time = now
+                        break
+            elif isinstance(r, UidModel):
+                for data in data_list:
+                    if data.content == str(r.user.id) and data.kw_type == KwType.UID:
+                        logger.debug(f"PIX收录 {r.user.id} 的数据: {len(r.illusts)}")
+                        data.seek_count += 1
+                        data.update_time = now
+                        break
+            elif isinstance(r, NoneModel):
+                num -= 1
+                logger.debug(f"pix 过滤无效Model: {r.content}:{r.kw_type}")
+                if r.error in ["oauth", "not_find_page", "not_find_illusts"]:
+                    for data in data_list:
+                        if data.content == r.content and data.kw_type == r.kw_type:
+                            logger.debug(
+                                f"PIX收录 {r.content}:{r.kw_type} 标记不可用..."
+                            )
+                            data.is_available = False
+                            data.update_time = now
+                            break
+        logger.debug(f"共收录: {num} 条数据.")
+        await PixKeyword.bulk_update(
+            data_list, fields=["seek_count", "update_time", "is_available"]
+        )
         return await cls.data_to_db(result)
 
     @classmethod
@@ -184,7 +263,10 @@ class PixSeekManage:
     def uid2model(cls, model: UidModel) -> list[PixGallery]:
         data_list = []
         for illust in model.illusts:
-            if illust.total_bookmarks >= 500:
+            if illust.total_bookmarks >= config.bookmarks:
+                if len(illust.meta_pages or []) > 5:
+                    logger.debug(f"pix PID: {illust.id} 图片数量大于5, 已跳过")
+                    continue
                 data_list.extend(cls.pid2model(illust))
             else:
                 logger.debug(
@@ -205,7 +287,9 @@ class PixSeekManage:
             data_json["nsfw_tag"] = 2
         else:
             data_json["nsfw_tag"] = 0
-        data_json["is_ai"] = "ai," in model.tags_text.lower()
+        data_json["is_ai"] = (
+            "ai," in model.tags_text.lower() or "ai画图," in model.tags_text.lower()
+        )
         data_json["img_p"] = img_p
         if model.meta_pages:
             for meta_page in model.meta_pages:
@@ -226,16 +310,18 @@ class PixSeekManage:
     def seek_pid(cls, pid: str, semaphore: Semaphore) -> Task:
         api = get_api(KwType.PID)
         params = {"id": pid}
-        return asyncio.create_task(cls.__seek(KwType.PID, api, params, semaphore))
+        return asyncio.create_task(cls.__seek(pid, KwType.PID, api, params, semaphore))
 
     @classmethod
     def seek_uid(cls, uid: str, semaphore: Semaphore) -> Task:
         api = get_api(KwType.UID)
-        params = {"id": uid}
-        return asyncio.create_task(cls.__seek(KwType.UID, api, params, semaphore))
+        params = {"id": uid, "page": 1}
+        return asyncio.create_task(cls.__seek(uid, KwType.UID, api, params, semaphore))
 
     @classmethod
     def seek_keyword(cls, keyword: str, page: int, semaphore: Semaphore) -> Task:
         api = get_api(KwType.KEYWORD)
         params = {"word": keyword, "page": page}
-        return asyncio.create_task(cls.__seek(KwType.KEYWORD, api, params, semaphore))
+        return asyncio.create_task(
+            cls.__seek(keyword, KwType.KEYWORD, api, params, semaphore)
+        )

@@ -6,11 +6,11 @@ from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWEInvalidAuth
 from pydantic import BaseModel, ValidationError
 
-from ..utils import config
+from ..utils.utils import config
 
 JWT_SUBJECT: str = "access"
 ALGORITHM: str = "HS256"
-EXPIRE_SECONDS: int = 60 * 60 * 24 * 365
+EXPIRE_SECONDS: int = 60 * 60 * 24 * 365 * 5
 
 
 class JWTMeta(BaseModel):

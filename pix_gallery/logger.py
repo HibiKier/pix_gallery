@@ -15,6 +15,7 @@ default_format: str = (
     "{message}"
 )
 
+
 logger.add(
     LOG_PATH / f"{datetime.now().date()}.log",
     level="INFO",

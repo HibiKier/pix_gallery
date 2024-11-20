@@ -1,15 +1,18 @@
-from typing import Literal
-
 from pydantic import BaseModel
 
 
-class PostData(BaseModel):
-    tags: list[str] = []
-    num: int = 1
-    size: Literal["large", "medium", "original", "square_medium"] = "large"
-    nsfw_tag: list[int] | None = []
-    ai: bool | None = None
-    r18: bool | None = None
+class StarData(BaseModel):
+    user_id: str
+    """用户id"""
+    pid: str
+    """图片pid"""
+
+
+class RankData(BaseModel):
+    num: int = 10
+    """数量"""
+    nsfw: list[int] = [0, 1]
+    """nsfw_tag"""
 
 
 class Pix(BaseModel):

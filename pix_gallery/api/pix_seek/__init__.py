@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi.responses import JSONResponse
 from loguru import logger
 
@@ -26,3 +28,28 @@ async def _(data: PostData | None = None):
         return Result.warning_(info="没有需要收录的数据...")
     except Exception as e:
         return Result.fail(info=f"异常错误 {type(e)}: {e}")
+
+
+async def __start_seek():
+    while True:
+        await PixSeekManage.start_seek("u", 100, False)
+        await asyncio.sleep(60 * 60 * 24)
+
+
+is_run = False
+
+
+@router.post(
+    "/pix_seek_run",
+    dependencies=[auth_superuser()],
+    response_model=Result,
+    response_class=JSONResponse,
+    description="PIX搜索",
+)
+async def _():
+    global is_run
+    if is_run:
+        return Result.ok(info="pix搜索已启动")
+    is_run = True
+    asyncio.create_task(__start_seek())
+    return Result.ok(info="启动pix搜索")

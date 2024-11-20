@@ -1,3 +1,7 @@
+import asyncio
+
+from tortoise.expressions import Q
+
 from ...config import KwType
 from ...database.models.pix_gallery import PixGallery
 from ...database.models.pix_keyword import PixKeyword
@@ -42,12 +46,24 @@ class InfoManage:
         返回:
             BuildImage: 图片
         """
-        query = PixGallery
+        query = PixGallery.filter(block_level__isnull=True)
         if tags:
             for tag in tags:
-                query = query.filter(tags__contains=tag)
-        all_count = await query.annotate().count()
-        count = await query.filter(nsfw_tag__not=2).annotate().count()
-        r18_count = await query.filter(nsfw_tag=2).annotate().count()
-        ai_count = await query.filter(is_ai=True).annotate().count()
-        return ImageCount(count=all_count, normal=count, r18=r18_count, ai=ai_count)
+                query = query.filter(
+                    Q(tags__icontains=tag)
+                    | Q(author__icontains=tag)
+                    | Q(pid__icontains=tag)
+                    | Q(uid__icontains=tag)
+                    | Q(title__icontains=tag)
+                )
+        result = await asyncio.gather(
+            *[
+                query.annotate().count(),
+                query.filter(nsfw_tag__not=2).annotate().count(),
+                query.filter(nsfw_tag=2).annotate().count(),
+                query.filter(is_ai=True).annotate().count(),
+            ]
+        )
+        return ImageCount(
+            count=result[0], normal=result[1], r18=result[2], ai=result[3]
+        )

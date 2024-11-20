@@ -7,7 +7,7 @@ import ujson as json
 from httpx import Response
 from loguru import logger
 
-from .config import ConfigModel, KwType
+from ..config import ConfigModel, KwType
 
 
 def get_api(t: KwType) -> str:
@@ -59,6 +59,7 @@ class AsyncHttpx:
             proxy: 指定代理
             timeout: 超时时间
         """
+        logger.debug(f"GET {url} {params}")
         urls = [url] if isinstance(url, str) else url
         return await cls._get_first_successful(
             urls,
@@ -119,6 +120,7 @@ class Config:
         self.file = Path() / "config.json"
         if self.file.exists():
             self.data = ConfigModel.parse_file(self.file)
+            logger.info(f"成功加载配置: {self.data}")
         else:
             self.data = ConfigModel(
                 db_url="", token="", secret_key=secrets.token_urlsafe(32)
@@ -138,6 +140,7 @@ class Config:
     def bookmarks(self) -> int:
         return self.data.bookmarks
 
+    @property
     def token(self) -> str:
         return self.data.token
 
